@@ -23,7 +23,6 @@ func (c *WorkspaceCreateCommand) Run(args []string) int {
 		WithArgs(args),
 		WithFlags(flagSet),
 		WithNoConfig(),
-		WithNoLocalServer(),
 	); err != nil {
 		return 1
 	}
