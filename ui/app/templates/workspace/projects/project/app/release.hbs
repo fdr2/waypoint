@@ -14,11 +14,11 @@
 
   <div class="grid grid--overview-timeline">
     <Section @isExpandable={{false}}>
-      <:heading>{{t "page.release.overview.heading"}}</:heading>
+      <:heading>{{t "page.artifact.overview.heading"}}</:heading>
       <:body>
         <StatusReportMetaTable @model={{@model}} @artifactType="Release">
           <tr>
-            <th scope="row">{{t "page.release.overview.status"}}</th>
+            <th scope="row">{{t "page.artifact.overview.status"}}</th>
             <td>
               <OperationStatusIndicator::Release @operation={{@model}}/>
             </td>
@@ -29,7 +29,7 @@
     <Section @isExpandable={{false}}>
       <:heading>{{t "page.artifact.timeline.heading"}}</:heading>
       <:body>
-        <Timeline @timeline={{@model.timeline}} />
+        <Timeline @model={{@model.timeline}} />
       </:body>
     </Section>
   </div>
