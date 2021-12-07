@@ -1,19 +1,30 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import RouterService from '@ember/routing/router-service';
+import { DeploymentExtended, BuildExtended, ReleaseExtended } from 'waypoint/services/api';
 import ApiService from 'waypoint/services/api';
-import { Build, Deployment, Release } from 'waypoint-pb';
+import { Status } from 'waypoint-pb';
 
 interface Artifact {
   sequence: number;
   type: string;
   route: string;
-  completeTime: number;
+  status?: Status.AsObject;
   isCurrentRoute: boolean;
 }
 
+export interface TimelineModel {
+  build?: TimelineArtifact;
+  deployment?: TimelineArtifact;
+  release?: TimelineArtifact;
+}
+interface TimelineArtifact {
+  sequence: number;
+  status: Status.AsObject | undefined;
+}
 interface TimelineArgs {
-  currentArtifact: Deployment.AsObject | Build.AsObject | Release.AsObject;
+  currentArtifact: DeploymentExtended | BuildExtended | ReleaseExtended;
+  timeline: TimelineModel;
 }
 
 let TYPE_TRANSLATIONS = {
@@ -24,71 +35,37 @@ let TYPE_TRANSLATIONS = {
 
 let TYPE_ROUTES = {
   build: 'workspace.projects.project.app.build',
-  deployment: 'workspace.projects.project.app.deployment',
+  deployment: 'workspace.projects.project.app.deployment.deployment-seq',
   release: 'workspace.projects.project.app.release',
-}
+};
 
 export default class Timeline extends Component<TimelineArgs> {
   @service api!: ApiService;
   @service router!: RouterService;
 
+  areWeHere(currentArtifactKey: string): boolean {
+    let entry = Object.entries(TYPE_ROUTES).find(([_, value]) =>
+      this.router.currentRouteName.includes(value)
+    );
+
+    if (entry) {
+      return entry[0] === currentArtifactKey;
+    }
+    return false;
+  }
+
   get artifacts(): Artifact[] {
-    let timelineObjects = [] as Artifact[];
-    let preload = this.args.currentArtifact.preload;
-    let build = preload?.build ?? null;
-    let deployment = preload?.deployment ?? null;
-    if (build) {
-      let buildObj = {
-        sequence: build.sequence,
-        type: TYPE_TRANSLATIONS.build,
-        route: TYPE_ROUTES.build,
-        completeTime: build.status.completeTime.seconds,
-        isCurrentRoute: false,
+    let artifactsList: Artifact[] = [];
+    for (let key in this.args.timeline) {
+      let artifactObj = {
+        sequence: this.args.timeline[key].sequence,
+        type: TYPE_TRANSLATIONS[key],
+        route: TYPE_ROUTES[key],
+        status: this.args.timeline[key].status,
+        isCurrentRoute: this.areWeHere(key),
       } as Artifact;
-      timelineObjects.push(buildObj);
-    } else {
-      // if there's no build in preload, we're looking at a build
-      let buildObj = {
-        sequence: this.args.currentArtifact.sequence,
-        type: TYPE_TRANSLATIONS.build,
-        route: TYPE_ROUTES.build,
-        completeTime: this.args.currentArtifact.status?.completeTime?.seconds,
-        isCurrentRoute: true,
-      } as Artifact;
-      timelineObjects.push(buildObj);
-      return timelineObjects;
+      artifactsList.push(artifactObj);
     }
-
-    if (deployment) {
-      let deploymentObj = {
-        sequence: deployment.sequence,
-        type: TYPE_TRANSLATIONS.deployment,
-        route: TYPE_ROUTES.deployment,
-        completeTime: deployment.status.completeTime.seconds,
-        isCurrentRoute: false,
-      } as Artifact;
-      timelineObjects.push(deploymentObj);
-
-      // if there's a deployment in the preload, we're looking at a release
-      let releaseObj = {
-        sequence: this.args.currentArtifact.sequence,
-        type: TYPE_TRANSLATIONS.release,
-        route: TYPE_ROUTES.release,
-        completeTime: this.args.currentArtifact.status?.completeTime?.seconds,
-        isCurrentRoute: true,
-      } as Artifact;
-      timelineObjects.push(releaseObj);
-    } else {
-      // if there was a build in the preload but not a deployment, we're looking at a deployment
-      let deploymentObj = {
-        sequence: this.args.currentArtifact.sequence,
-        type: TYPE_TRANSLATIONS.deployment,
-        route: TYPE_ROUTES.deployment,
-        completeTime: this.args.currentArtifact.status?.completeTime?.seconds,
-        isCurrentRoute: true,
-      } as Artifact;
-      timelineObjects.push(deploymentObj);
-    }
-    return timelineObjects;
+    return artifactsList;
   }
 }

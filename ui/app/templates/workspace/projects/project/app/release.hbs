@@ -29,7 +29,7 @@
     <Section @isExpandable={{false}}>
       <:heading>{{t "page.artifact.timeline.heading"}}</:heading>
       <:body>
-        <Timeline @currentArtifact={{@model}}/>
+        <Timeline @timeline={{@model.timeline}} />
       </:body>
     </Section>
   </div>
